@@ -3,6 +3,7 @@ package com.javaguides.springboot.service.impl;
 
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.modelmapper.ModelMapper;
@@ -11,6 +12,8 @@ import org.springframework.stereotype.Service;
 
 import com.javaguides.springboot.dto.UserDto;
 import com.javaguides.springboot.entity.User;
+import com.javaguides.springboot.exception.EmailAlreadyExistsException;
+import com.javaguides.springboot.exception.ResourceNotFoundException;
 import com.javaguides.springboot.mapper.UserMapper;
 import com.javaguides.springboot.repository.UserRepository;
 import com.javaguides.springboot.service.UserService;
@@ -31,6 +34,12 @@ public class UserServiceImpl implements UserService{
         // Convert UserDto to User JPA entity user userMapper class
         // User user=UserMapper.mapToUser(userDto);
 
+        Optional<User> checkUser =userRepository.findByEmail(userDto.getEmail());
+
+        if(checkUser.isPresent()){
+            throw new EmailAlreadyExistsException("Email Already Present for this User");
+        }
+
         // Convert UserDto to User JPA using model mapper
         User user =modelMapper.map(userDto,User.class);
 
@@ -47,7 +56,10 @@ public class UserServiceImpl implements UserService{
 
     @Override
     public UserDto getUserById(long userId) {
-        User user=userRepository.findById(userId).get();
+
+        User user=userRepository.findById(userId).orElseThrow(
+            ()-> new ResourceNotFoundException("User", "Id", userId)
+        );
         // Convert the User entity to  UserDto
         // UserDto userDto=UserMapper.mapToUserDto(user);
 
@@ -65,10 +77,18 @@ public class UserServiceImpl implements UserService{
     public UserDto updateUser(UserDto userDto) {
         //  Convert UserDto to User JPA using usermapper class
         // User user=UserMapper.mapToUser(userDto);
+        
+        Optional<User> checkUser =userRepository.findByEmail(userDto.getEmail());
+
+        if(checkUser.isPresent()){
+            throw new EmailAlreadyExistsException("Email Already Present for this User");
+        }
 
         User user=modelMapper.map(userDto, User.class);
 
-        User existingUser=userRepository.findById(user.getId()).get();
+        User existingUser=userRepository.findById(user.getId()).orElseThrow(
+            ()-> new ResourceNotFoundException("User", "Id", user.getId())
+        );
 
         existingUser.setFirstName(userDto.getFirstName());
         existingUser.setLastName(userDto.getLastName());
@@ -86,6 +106,9 @@ public class UserServiceImpl implements UserService{
 
     @Override
     public void deleteUser(long userId) {
+        User user=userRepository.findById(userId).orElseThrow(
+            ()-> new ResourceNotFoundException("User", "Id", userId)
+        );
         userRepository.deleteById(userId);
     }
     
